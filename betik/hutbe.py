@@ -42,7 +42,11 @@ def pdf_sources(data):
     for line in reversed(lines):
         if line == 'Din Hizmetleri Genel Müdürlüğü':
             continue
-        if len(line) < 70 and re.search(r'\d', line) and not line.startswith('Tarih'):
+        if re.fullmatch(r'\d{1,2}\.?', line):
+            continue
+        # Kaynak satırı: kitap adı ve numara, tırnak ya da soru işareti içermez.
+        if (len(line) < 70 and re.search(r'\d', line) and re.search(r'[,/]', line)
+                and not re.search(r'[“”"?]', line) and not line.startswith('Tarih')):
             tail.append(line.rstrip('.') + '.')
         else:
             break
