@@ -74,12 +74,12 @@ def main():
     page = get(LIST)
     match = re.search(r'WPQ1ListData = (\{.*?\});\s*var', page, re.S)
     rows = json.loads(match.group(1))['Row']
-    rows.sort(key=lambda r: tuple(reversed(r['Tarih'].split('.'))), reverse=True)
+    rows.sort(key=lambda r: tuple(int(x) for x in reversed(r['Tarih'].split('.'))), reverse=True)
     os.makedirs('hutbe', exist_ok=True)
     index = []
     for row in rows[:KEEP]:
         day, month, year = row['Tarih'].split('.')
-        date = f'{year}-{month}-{day}'
+        date = f'{int(year):04d}-{int(month):02d}-{int(day):02d}'
         path = f'hutbe/{date}.json'
         if not os.path.exists(path):
             text = doc_to_text(get(BASE + urllib.parse.quote(row['Word'], safe='/%!()'), binary=True))
