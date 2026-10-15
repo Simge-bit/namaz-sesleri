@@ -26,8 +26,9 @@ def doc_to_text(data):
         if shutil.which('textutil'):
             subprocess.run(['textutil', '-convert', 'txt', '-output', path + '.txt', path], check=True)
             return open(path + '.txt', encoding='utf-8').read()
-        return subprocess.run(['catdoc', '-d', 'utf-8', '-w', path], check=True,
-                              capture_output=True, text=True).stdout
+        subprocess.run(['soffice', '--headless', '--convert-to', 'txt:Text (encoded):UTF8',
+                        '--outdir', tmp, path], check=True, capture_output=True)
+        return open(os.path.join(tmp, 'h.txt'), encoding='utf-8-sig').read()
 
 
 def parse(text):
