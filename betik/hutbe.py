@@ -9,14 +9,17 @@ UA = {'User-Agent': 'Mozilla/5.0 (namaz-vakti-rehberi; hutbe)'}
 KEEP = 12
 
 
-def get(url, binary=False):
+def get(url, binary=False, required=True):
     for attempt in range(4):
         try:
             data = urllib.request.urlopen(urllib.request.Request(url, headers=UA), timeout=90).read()
             return data if binary else data.decode('utf-8', 'ignore')
         except Exception:
             time.sleep(5 + attempt * 10)
-    raise SystemExit(f'İndirilemedi: {url}')
+    if required:
+        raise SystemExit(f'İndirilemedi: {url}')
+    print('İndirilemedi, sonraki çalışmada denenecek:', url)
+    return None
 
 
 def doc_to_text(data):
@@ -82,11 +85,15 @@ def main():
         date = f'{int(year):04d}-{int(month):02d}-{int(day):02d}'
         path = f'hutbe/{date}.json'
         if not os.path.exists(path):
-            text = doc_to_text(get(BASE + urllib.parse.quote(row['Word'], safe='/%!()'), binary=True))
+            word = get(BASE + urllib.parse.quote(row['Word'], safe='/%!()'), binary=True, required=False)
+            if word is None:
+                continue
+            text = doc_to_text(word)
             title, paragraphs, notes = parse(text)
             # Dönüştürücü dipnotları atlarsa kaynaklar PDF'ten alınır.
             if not notes and row.get('PDF'):
-                notes = pdf_sources(get(BASE + urllib.parse.quote(row['PDF'], safe='/%!()'), binary=True))
+                pdf = get(BASE + urllib.parse.quote(row['PDF'], safe='/%!()'), binary=True, required=False)
+                notes = pdf_sources(pdf) if pdf else []
             # Metindeki dipnot numaraları kaldırılır, kaynaklar ayrıca gösterilir.
             for item in paragraphs:
                 if 'p' in item:
@@ -101,7 +108,8 @@ def main():
             }
             with open(path, 'w') as f:
                 json.dump(item, f, ensure_ascii=False, separators=(',', ':'))
-        index.append({'date': date, 'title': html.unescape(row['Title'])})
+        if os.path.exists(path):
+            index.append({'date': date, 'title': html.unescape(row['Title'])})
     for name in os.listdir('hutbe'):
         if name != 'index.json' and name[:-5] not in {i['date'] for i in index}:
             os.remove(os.path.join('hutbe', name))
