@@ -15,7 +15,7 @@ jobs:
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
-      - run: sudo apt-get update -q && sudo apt-get install -y -q libreoffice-writer-nogui
+      - run: sudo apt-get update -q && sudo apt-get install -y -q libreoffice-writer-nogui poppler-utils
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'

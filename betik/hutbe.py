@@ -31,6 +31,24 @@ def doc_to_text(data):
         return open(os.path.join(tmp, 'h.txt'), encoding='utf-8-sig').read()
 
 
+def pdf_sources(data):
+    """Dipnotlardaki kaynaklar. PDF'in sonundaki kısa kaynak satırlarıdır."""
+    with tempfile.TemporaryDirectory() as tmp:
+        path = os.path.join(tmp, 'h.pdf')
+        open(path, 'wb').write(data)
+        text = subprocess.run(['pdftotext', path, '-'], capture_output=True, text=True).stdout
+    lines = [l.strip() for l in text.splitlines() if l.strip()]
+    tail = []
+    for line in reversed(lines):
+        if line == 'Din Hizmetleri Genel Müdürlüğü':
+            continue
+        if len(line) < 70 and re.search(r'\d', line) and not line.startswith('Tarih'):
+            tail.append(line.rstrip('.') + '.')
+        else:
+            break
+    return list(reversed(tail))
+
+
 def parse(text):
     lines = [l.strip() for l in text.replace('\r', '\n').splitlines()]
     lines = [l for l in lines if l and not re.search(r'[؀-ۿ]', l)]
@@ -62,6 +80,13 @@ def main():
         if not os.path.exists(path):
             text = doc_to_text(get(BASE + urllib.parse.quote(row['Word'], safe='/%!()'), binary=True))
             title, paragraphs, notes = parse(text)
+            # Dönüştürücü dipnotları atlarsa kaynaklar PDF'ten alınır.
+            if not notes and row.get('PDF'):
+                notes = pdf_sources(get(BASE + urllib.parse.quote(row['PDF'], safe='/%!()'), binary=True))
+            # Metindeki dipnot numaraları kaldırılır, kaynaklar ayrıca gösterilir.
+            for item in paragraphs:
+                if 'p' in item:
+                    item['p'] = re.sub(r'([”"’.!?])\d{1,2}(?=\s|$)', r'\1', item['p'])
             item = {
                 'date': date,
                 'title': html.unescape(row['Title']),
